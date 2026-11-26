@@ -91,6 +91,55 @@ def enviar_reverb(x, sr, sala, mix_db, pre_ms):
     return rev(pre, sr) * 10 ** (mix_db / 20)
 
 
+def _bandas(x, sr, f1=200.0, f2=3000.0):
+    """Divide em graves, médios e agudos (Linkwitz-Riley 4ª ordem)."""
+    from scipy.signal import butter, sosfilt
+    def lr(f, tipo, y):
+        sos = butter(2, f, btype=tipo, fs=sr, output="sos")
+        return sosfilt(sos, sosfilt(sos, y, axis=-1), axis=-1)
+    graves = lr(f1, "low", x)
+    resto = lr(f1, "high", x)
+    medios = lr(f2, "low", resto)
+    agudos = lr(f2, "high", resto)
+    # alinha a fase dos graves com o corte em f2 (all-pass), para a soma ficar plana
+    graves = lr(f2, "low", graves) + lr(f2, "high", graves)
+    return graves.astype(np.float32), medios.astype(np.float32), agudos.astype(np.float32)
+
+
+def masterizar(audio, sr, k, alvo_lufs=-13.0, teto_db=-1.0):
+    """Etapa de master, como num estúdio: EQ de master, compressão multibanda,
+    cola, saturação de fita leve, volume final e limiter."""
+    # 1. EQ de master: limpa sub-graves, um pouco de corpo, tira "lama", abre o ar.
+    audio = Pedalboard([
+        HighpassFilter(30),
+        LowShelfFilter(cutoff_frequency_hz=100, gain_db=1.0 * k),
+        PeakFilter(cutoff_frequency_hz=260, gain_db=-1.5 * k, q=0.9),
+        PeakFilter(cutoff_frequency_hz=3000, gain_db=0.8 * k, q=0.7),
+        HighShelfFilter(cutoff_frequency_hz=12000, gain_db=1.8 * k),
+    ])(audio, sr)
+    # 2. Multibanda: cada faixa de frequência controlada separadamente.
+    g, m, a = _bandas(audio, sr)
+    g = Pedalboard([Compressor(threshold_db=-24, ratio=2.5, attack_ms=30, release_ms=200)])(g, sr)
+    m = Pedalboard([Compressor(threshold_db=-20, ratio=1.8, attack_ms=15, release_ms=120)])(m, sr)
+    a = Pedalboard([Compressor(threshold_db=-28, ratio=2.0, attack_ms=5, release_ms=80)])(a, sr)
+    audio = g + m + a
+    # 3. Cola: compressor de barramento lento, só alguns dB.
+    audio = Pedalboard([Compressor(threshold_db=-18, ratio=1.5, attack_ms=30, release_ms=250)])(audio, sr)
+    # 4. Saturação de fita bem leve: dá densidade sem distorcer.
+    pico = np.abs(audio).max() + 1e-9
+    drive = 1.5
+    audio = (np.tanh(drive * audio / pico) / np.tanh(drive)) * pico * 0.85 + audio * 0.15
+    # 5. Volume final e limiter (CD/streaming: -13 LUFS, picos até -1 dB).
+    meter = pyln.Meter(sr)
+    audio = pyln.normalize.loudness(audio.T, meter.integrated_loudness(audio.T), alvo_lufs).T
+    audio = limitar(audio.astype(np.float32), sr, teto_db - 0.5, janela_ms=20)
+    # o limiter tira um pouco de volume; reajusta e limita de novo
+    falta = alvo_lufs - meter.integrated_loudness(audio.T)
+    if falta > 0.2:
+        audio = limitar(audio * 10 ** (falta / 20), sr, teto_db - 0.5, janela_ms=20)
+    return audio.astype(np.float32)
+
+
 def tratar_audio(wav_in, wav_out, k, forca_afinacao, separa, tmp):
     mix, sr = sf.read(wav_in, always_2d=True)
     mix = mix.T.astype(np.float32)
@@ -148,12 +197,7 @@ def tratar_audio(wav_in, wav_out, k, forca_afinacao, separa, tmp):
         ])(audio, sr)
         audio = audio + enviar_reverb(audio, sr, sala=0.4, mix_db=-17, pre_ms=20)
 
-    audio = Pedalboard([
-        Compressor(threshold_db=-16, ratio=2.0, attack_ms=30, release_ms=200),  # cola
-    ])(audio.astype(np.float32), sr)
-    meter = pyln.Meter(sr)
-    audio = pyln.normalize.loudness(audio.T, meter.integrated_loudness(audio.T), -14.0).T
-    audio = limitar(audio.astype(np.float32), sr, -1.5, janela_ms=25)
+    audio = masterizar(audio.astype(np.float32), sr, k)
     sf.write(wav_out, audio.T, sr, subtype="PCM_24")
 
 
