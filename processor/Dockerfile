@@ -2,7 +2,7 @@ FROM python:3.12-slim
 
 # FFmpeg do Debian já vem com vidstab (estabilização) e libx264.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ffmpeg curl \
+ && apt-get install -y --no-install-recommends ffmpeg curl build-essential \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
