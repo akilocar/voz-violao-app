@@ -71,6 +71,19 @@ def de_esser(x, sr, limiar_db=-28.0, max_reducao_db=8.0):
     return x * ganho[None, :]
 
 
+def dobrar(x, sr, atraso_ms=16.0):
+    """Violão "dobrado": a mesma gravação em cada lado do fone, uma delas
+    atrasada alguns milissegundos e com EQ levemente diferente. Abre o som e
+    deixa o violão mais cheio, com a voz sozinha no centro."""
+    mono = x.mean(axis=0)
+    d = int(sr * atraso_ms / 1000)
+    esq = Pedalboard([PeakFilter(cutoff_frequency_hz=2500, gain_db=1.0, q=0.7)])(mono[None, :], sr)[0]
+    dir_ = np.pad(mono, (d, 0))[: len(mono)]
+    dir_ = Pedalboard([PeakFilter(cutoff_frequency_hz=2500, gain_db=-1.0, q=0.7),
+                       HighShelfFilter(cutoff_frequency_hz=8000, gain_db=1.0)])(dir_[None, :], sr)[0]
+    return (np.stack([esq, dir_]) * 10 ** (-1.5 / 20)).astype(np.float32)
+
+
 def enviar_reverb(x, sr, sala, mix_db, pre_ms):
     rev = Pedalboard([HighpassFilter(250), LowpassFilter(9000),
                       Reverb(room_size=sala, damping=0.5, wet_level=1.0, dry_level=0.0, width=1.0)])
@@ -111,7 +124,7 @@ def tratar_audio(wav_in, wav_out, k, forca_afinacao, separa, tmp):
         # Limiter da voz: picos ficam no máximo 12 dB acima do nível médio dela.
         rms_db = 10 * np.log10(np.mean(voz[:, np.abs(voz).max(axis=0) > 1e-3] ** 2) + 1e-12)
         voz = limitar(voz, sr, rms_db + 12.0, janela_ms=15)
-        voz_rev = enviar_reverb(voz, sr, sala=0.55, mix_db=-15 + 4 * k, pre_ms=35)
+        voz_rev = enviar_reverb(voz, sr, sala=0.4, mix_db=-21 + 2 * k, pre_ms=30)
 
         violao = Pedalboard([
             HighpassFilter(70),
@@ -120,7 +133,8 @@ def tratar_audio(wav_in, wav_out, k, forca_afinacao, separa, tmp):
             HighShelfFilter(cutoff_frequency_hz=11000, gain_db=2.0 * k),
             Compressor(threshold_db=-22, ratio=2.0, attack_ms=20, release_ms=150),
         ])(violao, sr)
-        violao_rev = enviar_reverb(violao, sr, sala=0.35, mix_db=-20, pre_ms=10)
+        violao = dobrar(violao, sr, atraso_ms=16.0)
+        violao_rev = enviar_reverb(violao, sr, sala=0.3, mix_db=-25, pre_ms=10)
 
         audio = voz * 10 ** (1.5 / 20) + voz_rev + violao * 10 ** (-1.5 / 20) + violao_rev
     else:
