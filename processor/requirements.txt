@@ -7,3 +7,5 @@ noisereduce
 praat-parselmouth
 librosa
 audio-separator[cpu]
+audioread
+onnxruntime
