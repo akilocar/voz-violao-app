@@ -1,0 +1,28 @@
+{
+  "name": "voz-violao-app",
+  "version": "1.0.0",
+  "description": "Melhora vídeos de voz e violão: som de estúdio natural e imagem mais limpa.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "tsc",
+    "db:migrate": "wrangler d1 migrations apply voz-violao --remote"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akilocar/voz-violao-app.git"
+  },
+  "bugs": {
+    "url": "https://github.com/akilocar/voz-violao-app/issues"
+  },
+  "homepage": "https://github.com/akilocar/voz-violao-app#readme",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261125.1",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.168.0"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.3.7"
+  },
+  "private": true
+}

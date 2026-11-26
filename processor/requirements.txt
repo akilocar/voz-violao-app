@@ -1,0 +1,6 @@
+pedalboard
+numpy
+soundfile
+pyloudnorm
+noisereduce
+scipy
