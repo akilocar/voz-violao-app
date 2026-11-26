@@ -12,7 +12,7 @@ export interface Env {
 export class Processor extends Container<Env> {
   defaultPort = 8080;
   sleepAfter = "3m";
-  enableInternet = false;
+  enableInternet = true; // o separador de voz consulta os dados do modelo no GitHub
 }
 
 const MB = 1024 * 1024;
