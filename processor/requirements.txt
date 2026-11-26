@@ -1,0 +1,11 @@
+pedalboard
+numpy
+scipy
+soundfile
+pyloudnorm
+noisereduce
+praat-parselmouth
+librosa
+audio-separator[cpu]
+audioread
+onnxruntime

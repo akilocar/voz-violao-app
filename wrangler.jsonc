@@ -1,0 +1,46 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "voz-violao-app",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-20",
+  "observability": { "enabled": true },
+  "triggers": { "crons": ["0 6 * * *"] },
+
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "voz-violao",
+      "database_id": "bb538246-c776-4d6d-acdb-52cb3f2a22b3",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  "r2_buckets": [{ "binding": "VIDEOS", "bucket_name": "voz-violao-videos" }],
+
+  "queues": {
+    "producers": [{ "binding": "FILA", "queue": "voz-violao-processamento" }],
+    "consumers": [
+      {
+        "queue": "voz-violao-processamento",
+        "max_batch_size": 1,
+        "max_retries": 2
+      }
+    ]
+  },
+
+  // Processamento pesado (FFmpeg + Python) roda num container de 4 vCPU.
+  "containers": [
+    {
+      "class_name": "Processor",
+      "image": "./processor/Dockerfile",
+      "instance_type": "standard-4",
+      "max_instances": 3
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "PROCESSOR", "class_name": "Processor" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Processor"] }]
+}
