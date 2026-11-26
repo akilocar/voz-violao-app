@@ -190,6 +190,19 @@ export default {
     return env.ASSETS.fetch(req);
   },
 
+  // Limpeza diária: apaga vídeos e pedidos com mais de 7 dias.
+  async scheduled(_evento, env): Promise<void> {
+    const limite = Date.now() - 7 * 24 * 3600 * 1000;
+    let cursor: string | undefined;
+    do {
+      const lista = await env.VIDEOS.list({ cursor, limit: 1000 });
+      const velhos = lista.objects.filter((o) => o.uploaded.getTime() < limite).map((o) => o.key);
+      if (velhos.length) await env.VIDEOS.delete(velhos);
+      cursor = lista.truncated ? lista.cursor : undefined;
+    } while (cursor);
+    await env.DB.prepare("DELETE FROM jobs WHERE criado_em < ?").bind(limite).run();
+  },
+
   async queue(lote, env): Promise<void> {
     for (const msg of lote.messages) {
       try {
