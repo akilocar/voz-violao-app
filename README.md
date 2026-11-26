@@ -31,13 +31,9 @@ navegador ──► Worker (src/index.ts) ──► R2: originais/ e resultados/
 
 ## Deploy automático
 
-Todo push na `main` passa pelo GitHub Actions (`.github/workflows/deploy.yml`): checa o código, testa o processamento, cria a fila, aplica as migrações do D1 e publica Worker e container.
+O Worker está ligado a este repositório pelo **Workers Builds** do Cloudflare. Todo push na `main` roda `npm run deploy:cf`, que cria a fila (se faltar), aplica as migrações do D1 e publica Worker e container. O GitHub Actions (`.github/workflows/checagem.yml`) só checa o código e testa o processamento.
 
-Segredos necessários no repositório (Settings → Secrets and variables → Actions):
-- `CLOUDFLARE_API_TOKEN`: token com permissão de Workers Scripts, Containers, D1, R2, Queues (edição)
-- `CLOUDFLARE_ACCOUNT_ID`: id da conta Cloudflare
-
-Containers exigem o plano Workers Paid (US$ 5/mês).
+Containers e Queues exigem o plano Workers Paid.
 
 ## Rodar o processamento localmente
 

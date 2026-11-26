@@ -1,12 +1,13 @@
 {
   "name": "voz-violao-app",
   "version": "1.0.0",
-  "description": "Melhora vídeos de voz e violão: som de estúdio natural e imagem mais limpa.",
+  "description": "Melhora v\u00eddeos de voz e viol\u00e3o: som de est\u00fadio natural e imagem mais limpa.",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "check": "tsc",
-    "db:migrate": "wrangler d1 migrations apply voz-violao --remote"
+    "db:migrate": "wrangler d1 migrations apply voz-violao --remote",
+    "deploy:cf": "(npx wrangler queues create voz-violao-processamento || true) && npx wrangler d1 migrations apply voz-violao --remote && npx wrangler deploy"
   },
   "repository": {
     "type": "git",
