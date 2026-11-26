@@ -20,9 +20,12 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
           pip install -r processor/requirements.txt
+          mkdir -p processor/modelos
+          curl -fsSL -o processor/modelos/UVR-MDX-NET-Voc_FT.onnx \
+            https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/UVR-MDX-NET-Voc_FT.onnx
           ffmpeg -hide_banner -loglevel error -y \
             -f lavfi -i testsrc2=size=720x1280:rate=30:duration=6 \
-            -f lavfi -i "sine=frequency=220:duration=6" -shortest teste.mp4
+            -f lavfi -i "sine=frequency=223:duration=6" -shortest teste.mp4
           python processor/melhorar.py teste.mp4 saida.mp4
           ffprobe -v error -show_entries stream=codec_name -of csv saida.mp4
       - name: Construir a imagem do container

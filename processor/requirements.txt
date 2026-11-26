@@ -1,6 +1,9 @@
 pedalboard
 numpy
+scipy
 soundfile
 pyloudnorm
 noisereduce
-scipy
+praat-parselmouth
+librosa
+audio-separator[cpu]

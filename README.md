@@ -4,16 +4,13 @@ App web que recebe um vídeo de voz e violão gravado no celular e devolve o mes
 
 ## O que o processamento faz
 
-**Áudio** (`processor/melhorar.py`, com [pedalboard](https://github.com/spotify/pedalboard))
-- Passa-alta em 75 Hz e redução de ruído parcial, para não "aguar" a voz
-- EQ: tira o som embolado de celular (220 e 450 Hz), dá presença (3,2 kHz) e brilho (9 kHz)
-- Compressão leve, reverb de sala curto e limitador
-- Volume final em -14 LUFS, o padrão de Instagram e YouTube
+**Áudio** (`processor/melhorar.py`)
+1. Separa voz e violão com o modelo MDX-Net Voc FT (onnx). O violão é "mistura menos voz", então nada se perde.
+2. **Voz**: afinação sutil (`afinar.py`: corrige só as notas que ficam fora mais de 12 cents, puxando 70% do desvio, sem mexer no vibrato, com ressíntese PSOLA que preserva o timbre), redução de ruído, EQ, de-esser, dois compressores, limiter e reverb de estúdio com pré-delay.
+3. **Violão**: EQ (tira o "boom", realça as cordas), compressão leve e reverb curto.
+4. **Mix**: compressor de barramento, -14 LUFS e limiter de pico em -1,5 dB.
 
-**Imagem** (FFmpeg)
-- Estabilização (vidstab), redução de granulado (hqdn3d) e ajuste leve de contraste, cor e nitidez
-
-Tudo é regulado por uma **intensidade** de 0 a 1 escolhida no site.
+**Imagem** (FFmpeg): estabilização, 1080p, redução de granulado, contraste, cor quente, nitidez e vinheta leve.
 
 ## Arquitetura (Cloudflare)
 
